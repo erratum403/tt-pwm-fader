@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2024 Your Name
+ * Copyright (c) 2025 Your Name
  * SPDX-License-Identifier: Apache-2.0
  */
 
 `default_nettype none
 
-module tt_um_example (
+module tt_um_pwm_fader (
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
     input  wire [7:0] uio_in,   // IOs: Input path
@@ -16,12 +16,31 @@ module tt_um_example (
     input  wire       rst_n     // reset_n - low to reset
 );
 
-  // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
-  assign uio_out = 0;
-  assign uio_oe  = 0;
+    // PWM Logic
+    // We use a counter to create a "sawtooth" wave.
+    // We compare the input (ui_in) to the counter.
+    // If counter < input, output is HIGH. Otherwise LOW.
+    
+    logic [7:0] counter;
+    logic       pwm_out;
 
-  // List all unused inputs to prevent warnings
-  wire _unused = &{ena, clk, rst_n, 1'b0};
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            counter <= 0;
+        end else begin
+            counter <= counter + 1;
+        end
+    end
+
+    // Comparator for PWM generation
+    assign pwm_out = (counter < ui_in);
+
+    // Output assignments
+    assign uo_out[0] = pwm_out;  // Map PWM to the first output pin
+    assign uo_out[7:1] = 0;      // Tie low other outputs
+
+    // Unused pins must be assigned to avoid "floating" errors
+    assign uio_out = 0;
+    assign uio_oe  = 0;
 
 endmodule
